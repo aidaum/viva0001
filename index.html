@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="ko" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>조선 시대 퀴즈</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+    }
+    
+    .quiz-wrapper {
+      font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    
+    .option-button {
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    
+    .option-button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .correct {
+      background-color: #10b981 !important;
+      color: white !important;
+      border-color: #10b981 !important;
+    }
+    
+    .incorrect {
+      background-color: #ef4444 !important;
+      color: white !important;
+      border-color: #ef4444 !important;
+    }
+    
+    .result-card {
+      animation: slideIn 0.5s ease;
+    }
+    
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .progress-bar {
+      transition: width 0.3s ease;
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full">
+  <div id="app" class="quiz-wrapper w-full h-full overflow-auto"></div>
+  <script>
+    const defaultConfig = {
+      quiz_title: "조선 시대 퀴즈",
+      quiz_subtitle: "초등학교 5학년 사회",
+      background_color: "#fef3c7",
+      card_color: "#ffffff",
+      text_color: "#1f2937",
+      primary_button_color: "#f59e0b",
+      secondary_button_color: "#3b82f6",
+      font_family: "Noto Sans KR",
+      font_size: 16
+    };
+
+    const quizData = [
+      {
+        id: 1,
+        question: "조선을 건국한 왕은 누구인가요?",
+        options: ["세종대왕", "태조 이성계", "정조", "광해군"],
+        correctAnswer: 1,
+        explanation: "태조 이성계가 1392년에 조선을 건국했어요."
+      },
+      {
+        id: 2,
+        question: "한글을 만든 왕은 누구인가요?",
+        options: ["태종", "세종대왕", "성종", "중종"],
+        correctAnswer: 1,
+        explanation: "세종대왕이 1443년에 훈민정음(한글)을 창제했어요."
+      },
+      {
+        id: 3,
+        question: "조선 시대의 신분 제도가 아닌 것은?",
+        options: ["양반", "중인", "상민", "귀족"],
+        correctAnswer: 3,
+        explanation: "조선 시대에는 양반, 중인, 상민, 천민의 신분 제도가 있었어요."
+      },
+      {
+        id: 4,
+        question: "경복궁을 처음 지은 왕은 누구인가요?",
+        options: ["태조 이성계", "세종대왕", "태종", "연산군"],
+        correctAnswer: 0,
+        explanation: "태조 이성계가 1395년에 경복궁을 처음 지었어요."
+      },
+      {
+        id: 5,
+        question: "조선 시대 과거 시험의 최종 단계는?",
+        options: ["초시", "복시", "전시", "회시"],
+        correctAnswer: 2,
+        explanation: "과거 시험은 초시, 복시, 전시 순서로 진행되며, 전시가 마지막 단계예요."
+      },
+      {
+        id: 6,
+        question: "임진왜란 때 거북선을 만든 장군은?",
+        options: ["이순신", "김유신", "을지문덕", "강감찬"],
+        correctAnswer: 0,
+        explanation: "이순신 장군이 거북선을 만들어 임진왜란에서 큰 활약을 했어요."
+      },
+      {
+        id: 7,
+        question: "조선의 수도는 어디였나요?",
+        options: ["경주", "한양", "평양", "부여"],
+        correctAnswer: 1,
+        explanation: "조선의 수도는 한양(현재의 서울)이었어요."
+      },
+      {
+        id: 8,
+        question: "조선 시대 최고 교육 기관은?",
+        options: ["서당", "향교", "성균관", "사학"],
+        correctAnswer: 2,
+        explanation: "성균관은 조선 시대 최고 교육 기관으로 양반 자제들이 공부했어요."
+      }
+    ];
+
+    let currentQuestion = 0;
+    let score = 0;
+    let answered = false;
+
+    async function onConfigChange(config) {
+      const baseSize = config.font_size || defaultConfig.font_size;
+      const customFont = config.font_family || defaultConfig.font_family;
+      const baseFontStack = '-apple-system, BlinkMacSystemFont, sans-serif';
+      
+      const app = document.getElementById('app');
+      app.style.backgroundColor = config.background_color || defaultConfig.background_color;
+      app.style.fontFamily = `${customFont}, ${baseFontStack}`;
+      
+      if (currentQuestion >= quizData.length) {
+        renderResults(config, baseSize, customFont, baseFontStack);
+      } else {
+        renderQuestion(config, baseSize, customFont, baseFontStack);
+      }
+    }
+
+    function renderQuestion(config, baseSize, customFont, baseFontStack) {
+      const app = document.getElementById('app');
+      const question = quizData[currentQuestion];
+      
+      app.innerHTML = `
+        <div class="min-h-full flex items-center justify-center p-6">
+          <div class="w-full max-w-2xl">
+            <div class="text-center mb-8">
+              <h1 id="main-title" class="font-bold mb-2" style="font-size: ${baseSize * 2}px; color: ${config.text_color || defaultConfig.text_color}; font-family: ${customFont}, ${baseFontStack};">
+                ${config.quiz_title || defaultConfig.quiz_title}
+              </h1>
+              <p id="subtitle" style="font-size: ${baseSize * 1.1}px; color: ${config.text_color || defaultConfig.text_color}; font-family: ${customFont}, ${baseFontStack}; opacity: 0.8;">
+                ${config.quiz_subtitle || defaultConfig.quiz_subtitle}
+              </p>
+            </div>
+            
+            <div class="rounded-2xl shadow-lg p-8 mb-6" style="background-color: ${config.card_color || defaultConfig.card_color};">
+              <div class="mb-6">
+                <div class="flex justify-between items-center mb-4">
+                  <span style="font-size: ${baseSize * 0.9}px; color: ${config.text_color || defaultConfig.text_color}; opacity: 0.7;">
+                    문제 ${currentQuestion + 1} / ${quizData.length}
+                  </span>
+                  <span style="font-size: ${baseSize * 0.9}px; color: ${config.text_color || defaultConfig.text_color}; opacity: 0.7;">
+                    점수: ${score}점
+                  </span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div class="progress-bar h-2 rounded-full" style="width: ${((currentQuestion) / quizData.length) * 100}%; background-color: ${config.primary_button_color || defaultConfig.primary_button_color};"></div>
+                </div>
+              </div>
+              
+              <h2 class="mb-6 font-bold" style="font-size: ${baseSize * 1.3}px; color: ${config.text_color || defaultConfig.text_color}; font-family: ${customFont}, ${baseFontStack};">
+                ${question.question}
+              </h2>
+              
+              <div id="options" class="space-y-3">
+                ${question.options.map((option, index) => `
+                  <button 
+                    class="option-button w-full text-left p-4 rounded-lg border-2 border-gray-200"
+                    style="font-size: ${baseSize}px; color: ${config.text_color || defaultConfig.text_color}; font-family: ${customFont}, ${baseFontStack}; background-color: white;"
+                    onclick="selectAnswer(${index})"
+                  >
+                    ${option}
+                  </button>
+                `).join('')}
+              </div>
+              
+              <div id="feedback" class="mt-6 hidden">
+                <div class="p-4 rounded-lg" style="background-color: rgba(59, 130, 246, 0.1);">
+                  <p class="font-bold mb-2" style="font-size: ${baseSize * 1.1}px; color: ${config.text_color || defaultConfig.text_color}; font-family: ${customFont}, ${baseFontStack};">
+                    💡 설명
+                  </p>
+                  <p style="font-size: ${baseSize}px; color: ${config.text_color || defaultConfig.text_color}; font-family: ${customFont}, ${baseFontStack};">
+                    ${question.explanation}
+                  </p>
+                </div>
+                <button 
+                  id="next-button"
+                  class="w-full mt-4 py-3 px-6 rounded-lg font-bold transition-all hover:opacity-90"
+                  style="background-color: ${config.secondary_button_color || defaultConfig.secondary_button_color}; color: white; font-size: ${baseSize * 1.1}px; font-family: ${customFont}, ${baseFontStack};"
+                  onclick="nextQuestion()"
+                >
+                  ${currentQuestion < quizData.length - 1 ? '다음 문제' : '결과 보기'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderResults(config, baseSize, customFont, baseFontStack) {
+      const app = document.getElementById('app');
+      const percentage = Math.round((score / quizData.length) * 100);
+      let message = "";
+      let emoji = "";
+      
+      if (percentage >= 90) {
+        message = "정말 훌륭해요! 조선 시대를 완벽하게 이해했어요! 🎉";
+        emoji = "🏆";
+      } else if (percentage >= 70) {
+        message = "잘했어요! 조선 시대에 대해 많이 알고 있네요! 👍";
+        emoji = "⭐";
+      } else if (percentage >= 50) {
+        message = "괜찮아요! 조금만 더 공부하면 완벽해질 거예요! 💪";
+        emoji = "📚";
+      } else {
+        message = "다시 한번 도전해보세요! 화이팅! 🌟";
+        emoji = "💡";
+      }
+      
+      app.innerHTML = `
+        <div class="min-h-full flex items-center justify-center p-6">
+          <div class="w-full max-w-2xl">
+            <div class="result-card rounded-2xl shadow-lg p-8 text-center" style="background-color: ${config.card_color || defaultConfig.card_color};">
+              <div style="font-size: ${baseSize * 4}px;" class="mb-4">${emoji}</div>
+              <h2 class="font-bold mb-4" style="font-size: ${baseSize * 2}px; color: ${config.text_color || defaultConfig.text_color}; font-family: ${customFont}, ${baseFontStack};">
+                퀴즈 완료!
+              </h2>
+              <div class="mb-6">
+                <div class="font-bold mb-2" style="color: ${config.primary_button_color || defaultConfig.primary_button_color}; font-size: ${baseSize * 3.5}px; font-family: ${customFont}, ${baseFontStack};">
+                  ${score}점
+                </div>
+                <p style="font-size: ${baseSize * 1.2}px; color: ${config.text_color || defaultConfig.text_color}; opacity: 0.7; font-family: ${customFont}, ${baseFontStack};">
+                  ${quizData.length}문제 중 ${score}문제 정답
+                </p>
+                <p style="font-size: ${baseSize * 1.5}px; color: ${config.text_color || defaultConfig.text_color}; font-family: ${customFont}, ${baseFontStack};" class="mt-2 font-bold">
+                  ${percentage}%
+                </p>
+              </div>
+              <p class="mb-8" style="font-size: ${baseSize * 1.1}px; color: ${config.text_color || defaultConfig.text_color}; font-family: ${customFont}, ${baseFontStack};">
+                ${message}
+              </p>
+              <button 
+                class="py-3 px-8 rounded-lg font-bold transition-all hover:opacity-90"
+                style="background-color: ${config.primary_button_color || defaultConfig.primary_button_color}; color: white; font-size: ${baseSize * 1.1}px; font-family: ${customFont}, ${baseFontStack};"
+                onclick="restartQuiz()"
+              >
+                🔄 다시 도전하기
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function selectAnswer(selectedIndex) {
+      if (answered) return;
+      
+      answered = true;
+      const question = quizData[currentQuestion];
+      const options = document.querySelectorAll('.option-button');
+      
+      options.forEach((option, index) => {
+        option.disabled = true;
+        option.style.cursor = 'default';
+        if (index === question.correctAnswer) {
+          option.classList.add('correct');
+        } else if (index === selectedIndex && selectedIndex !== question.correctAnswer) {
+          option.classList.add('incorrect');
+        }
+      });
+      
+      if (selectedIndex === question.correctAnswer) {
+        score++;
+        const scoreElement = document.querySelector('[style*="점수:"]');
+        if (scoreElement) {
+          scoreElement.textContent = `점수: ${score}점`;
+        }
+      }
+      
+      document.getElementById('feedback').classList.remove('hidden');
+    }
+
+    function nextQuestion() {
+      answered = false;
+      currentQuestion++;
+      if (window.elementSdk) {
+        onConfigChange(window.elementSdk.config);
+      } else {
+        onConfigChange(defaultConfig);
+      }
+    }
+
+    function restartQuiz() {
+      currentQuestion = 0;
+      score = 0;
+      answered = false;
+      if (window.elementSdk) {
+        onConfigChange(window.elementSdk.config);
+      } else {
+        onConfigChange(defaultConfig);
+      }
+    }
+
+    window.selectAnswer = selectAnswer;
+    window.nextQuestion = nextQuestion;
+    window.restartQuiz = restartQuiz;
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities: (config) => ({
+          recolorables: [
+            {
+              get: () => config.background_color || defaultConfig.background_color,
+              set: (value) => {
+                config.background_color = value;
+                window.elementSdk.setConfig({ background_color: value });
+              }
+            },
+            {
+              get: () => config.card_color || defaultConfig.card_color,
+              set: (value) => {
+                config.card_color = value;
+                window.elementSdk.setConfig({ card_color: value });
+              }
+            },
+            {
+              get: () => config.text_color || defaultConfig.text_color,
+              set: (value) => {
+                config.text_color = value;
+                window.elementSdk.setConfig({ text_color: value });
+              }
+            },
+            {
+              get: () => config.primary_button_color || defaultConfig.primary_button_color,
+              set: (value) => {
+                config.primary_button_color = value;
+                window.elementSdk.setConfig({ primary_button_color: value });
+              }
+            },
+            {
+              get: () => config.secondary_button_color || defaultConfig.secondary_button_color,
+              set: (value) => {
+                config.secondary_button_color = value;
+                window.elementSdk.setConfig({ secondary_button_color: value });
+              }
+            }
+          ],
+          borderables: [],
+          fontEditable: {
+            get: () => config.font_family || defaultConfig.font_family,
+            set: (value) => {
+              config.font_family = value;
+              window.elementSdk.setConfig({ font_family: value });
+            }
+          },
+          fontSizeable: {
+            get: () => config.font_size || defaultConfig.font_size,
+            set: (value) => {
+              config.font_size = value;
+              window.elementSdk.setConfig({ font_size: value });
+            }
+          }
+        }),
+        mapToEditPanelValues: (config) => new Map([
+          ["quiz_title", config.quiz_title || defaultConfig.quiz_title],
+          ["quiz_subtitle", config.quiz_subtitle || defaultConfig.quiz_subtitle]
+        ])
+      });
+      
+      onConfigChange(window.elementSdk.config);
+    } else {
+      onConfigChange(defaultConfig);
+    }
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b911b4ea273efdd',t:'MTc2NzU5NjUxMC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
